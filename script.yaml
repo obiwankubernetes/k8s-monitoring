@@ -1,0 +1,46 @@
+# Create a cluster with kind via docker 
+kind create cluster --name prometheus --image <container:image>
+
+# create a namespace to house all monitoring resources
+kubectl create ns monitoring
+
+# Create the prmetheus operator to instanciate all CRDs from within this folder ./<>/
+kubectl -n monitoring apply -f ./prometheus-operator/
+
+# check operator running in monitoring namespace
+kubectl -n monitoring get pods
+
+# Deploy monitoring components in monitoring namespace as pods that attach to prometheus operator
+# node exporter to scrape all linux machine metrics
+kubectl -n monitoring apply -f ./node-exporter/
+# cluster telemetry about ingress stateful sets
+kubectl -n monitoring apply -f ./kube-state-metrics/
+# handles alerts and does it in batches and manages life cycle
+kubectl -n monitoring apply -f ./alertmanager/
+
+# Deploy prometheus instance and all the service monitors for targets  so that promethues operator to scrape all these monitoring components for data
+# plus some extra monitoring components for api, kubectl .. .and configure this yaml
+kubectl -n monitoring apply -f ./prometheus-cluster-monitoring/
+
+# init and deploy grafana dashboarding
+kubectl -n monitoring create -f ./grafana/
+
+# check to see if whole stack of monitoring components is running monitoring namespace
+kubectl -n monitoring get pods
+
+# load specifically prometheus at local host
+kubectl -n monitoring port-forward <prometheus-pod-name-from-yaml> <port>
+
+# check prometheus dashboard to see all monitoring components at localhost:<port>
+go to localhost:<port-for-prometheus-pod-in-yaml> on browser
+
+# load grafana dassh at local host
+kubectl -n monitoring port-forward <grafana-pod-name-from-yaml> <port>
+
+# check grafan dash
+go to localhost:<port-for-grafana-pod-in-yaml>
+sign in w/ admin and admin as credentials
+
+# check data sources to see our k8 cluster attached to grafana board
+
+# check monitoring namespace to see specific dashboards for kubectl, api server, compute, memory, cpu usage, node exporter, packages, network traffic, vm stack
